@@ -8,6 +8,7 @@ require (
 	github.com/jackc/pgx/v4 v4.11.0
 	github.com/onsi/gomega v1.10.2 // indirect
 	github.com/open-cluster-management/governance-policy-propagator v0.0.0-20210520203318-a78632de1e26
+	github.com/openshift/hive/apis v0.0.0-20211007215548-a27a4f7abc4e
 	github.com/operator-framework/operator-sdk v0.19.4
 	github.com/spf13/pflag v1.0.5
 	golang.org/x/tools v0.0.0-20201118003311-bd56c0adb394 // indirect

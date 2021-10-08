@@ -9,6 +9,8 @@ import (
 
 	"github.com/jackc/pgx/v4/pgxpool"
 	policiesv1 "github.com/open-cluster-management/governance-policy-propagator/pkg/apis/policy/v1"
+	cdv1 "github.com/openshift/hive/apis/hive/v1"
+	hive "github.com/openshift/hive/apis/scheme"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/scheme"
@@ -17,8 +19,15 @@ import (
 // AddToScheme adds all the resources to be processed to the Scheme.
 func AddToScheme(s *runtime.Scheme) error {
 	schemeBuilders := []*scheme.Builder{policiesv1.SchemeBuilder}
+	ocpSchemeBuilders := []*hive.Builder{cdv1.SchemeBuilder}
 
 	for _, schemeBuilder := range schemeBuilders {
+		if err := schemeBuilder.AddToScheme(s); err != nil {
+			return fmt.Errorf("failed to add scheme: %w", err)
+		}
+	}
+
+	for _, schemeBuilder := range ocpSchemeBuilders {
 		if err := schemeBuilder.AddToScheme(s); err != nil {
 			return fmt.Errorf("failed to add scheme: %w", err)
 		}
@@ -29,7 +38,10 @@ func AddToScheme(s *runtime.Scheme) error {
 
 // AddDBSyncers adds all the DBSyncers to the Manager.
 func AddDBSyncers(mgr ctrl.Manager, dbConnectionPool *pgxpool.Pool, syncInterval time.Duration) error {
-	addDBSyncerFunctions := []func(ctrl.Manager, *pgxpool.Pool, time.Duration) error{addPolicyDBSyncer}
+	addDBSyncerFunctions := []func(ctrl.Manager, *pgxpool.Pool, time.Duration) error{
+		addPolicyDBSyncer,
+		addClusterdeploymentDBSyncer,
+	}
 
 	for _, addDBSyncerFunction := range addDBSyncerFunctions {
 		if err := addDBSyncerFunction(mgr, dbConnectionPool, syncInterval); err != nil {
