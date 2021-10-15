@@ -18,8 +18,8 @@ import (
 )
 
 const (
-	controllerName = "clusterdeployment-status-syncer"
-	componentName  = "clusterdeployments"
+	controllerName             = "clusterdeployment-status-syncer"
+	componentClusterdeployment = "clusterdeployments"
 )
 
 type clusterdeploymentDBSyncer struct {
@@ -89,7 +89,7 @@ func (syncer *clusterdeploymentDBSyncer) sync(ctx context.Context) {
 // handle, read the clusterdeployment's status from DB, then write the status to the cluster's CR.
 
 func (syncer *clusterdeploymentDBSyncer) handle(ctx context.Context, instance *cdv1.ClusterDeployment) {
-	syncer.log.Info(fmt.Sprintf("handling %s, instance: %s/%s, with uuid: %s", componentName, instance.GetNamespace(), instance.GetName(), string(instance.GetUID())))
+	syncer.log.Info(fmt.Sprintf("handling %s, instance: %s/%s, with uuid: %s", componentClusterdeployment, instance.GetNamespace(), instance.GetName(), string(instance.GetUID())))
 
 	rows, err := syncer.databaseConnectionPool.Query(ctx,
 		fmt.Sprintf(`SELECT leaf_hub_name, payload FROM status.%s
@@ -111,7 +111,7 @@ func (syncer *clusterdeploymentDBSyncer) handle(ctx context.Context, instance *c
 		cdStatus := &cdv1.ClusterDeploymentStatus{}
 
 		if err := json.Unmarshal([]byte(statusInDBStr), &cdStatus); err != nil {
-			syncer.log.Error(err, "failed to Unmarshal %s status string", componentName)
+			syncer.log.Error(err, "failed to Unmarshal %s status string", componentClusterdeployment)
 			continue
 		}
 
@@ -143,11 +143,11 @@ func addClusterdeploymentDBSyncer(mgr ctrl.Manager, databaseConnectionPool *pgxp
 		log:                    ctrl.Log.WithName(controllerName),
 		databaseConnectionPool: databaseConnectionPool,
 		syncInterval:           syncInterval,
-		statusTableName:        componentName,
-		specTableName:          componentName,
+		statusTableName:        componentClusterdeployment,
+		specTableName:          componentClusterdeployment,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to add %s syncer to the manager, err: %w", componentName, err)
+		return fmt.Errorf("failed to add %s syncer to the manager, err: %w", componentClusterdeployment, err)
 	}
 
 	return nil

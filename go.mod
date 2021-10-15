@@ -11,7 +11,7 @@ require (
 	github.com/openshift/hive/apis v0.0.0-20211007215548-a27a4f7abc4e
 	github.com/operator-framework/operator-sdk v0.19.4
 	github.com/spf13/pflag v1.0.5
-	golang.org/x/tools v0.0.0-20201118003311-bd56c0adb394 // indirect
+	golang.org/x/tools v0.1.7 // indirect
 	k8s.io/apimachinery v0.20.5
 	k8s.io/client-go v12.0.0+incompatible
 	sigs.k8s.io/controller-runtime v0.6.2
