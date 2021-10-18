@@ -12,16 +12,34 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/jackc/pgx/v4/pgxpool"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	cdv1 "github.com/openshift/hive/apis/hive/v1"
 )
+
+func addClusterdeploymentDBSyncer(mgr ctrl.Manager, databaseConnectionPool *pgxpool.Pool, syncInterval time.Duration) error {
+	name := "clusterdeployments"
+
+	cd := NewClusterlifecycleDBSyncer(mgr, databaseConnectionPool, syncInterval,
+		withComponentNameAsTableNames(name),
+		withGVK(metav1.GroupVersionKind{Group: cdv1.HiveAPIGroup, Version: cdv1.HiveAPIVersion, Kind: "ClusterDeployment"}))
+	if err := mgr.Add(cd); err != nil {
+		return fmt.Errorf("failed to add %s syncer to the manager, err: %w", name, err)
+	}
+
+	return nil
+}
 
 type clusterlifecycleDBSyncer struct {
 	client                 client.Client
 	log                    logr.Logger
 	databaseConnectionPool *pgxpool.Pool
 	syncInterval           time.Duration
+	gvk                    metav1.GroupVersionKind
 	statusTableName        string
 	specTableName          string
 }
@@ -33,6 +51,12 @@ func withComponentNameAsTableNames(name string) Option {
 		c.log = ctrl.Log.WithName(fmt.Sprintf("%s-status-syncer", name))
 		c.specTableName = name
 		c.statusTableName = name
+	}
+}
+
+func withGVK(gvk metav1.GroupVersionKind) Option {
+	return func(c *clusterlifecycleDBSyncer) {
+		c.gvk = gvk
 	}
 }
 
@@ -94,6 +118,12 @@ func (syncer *clusterlifecycleDBSyncer) sync(ctx context.Context) {
 		}
 
 		instance := &unstructured.Unstructured{}
+		instance.SetGroupVersionKind(schema.GroupVersionKind{
+			Group:   syncer.gvk.Group,
+			Version: syncer.gvk.Version,
+			Kind:    syncer.gvk.Kind,
+		})
+
 		err = syncer.client.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, instance)
 
 		if err != nil {
@@ -157,17 +187,6 @@ func (syncer *clusterlifecycleDBSyncer) updateStatusFromDBtoCluter(ctx context.C
 	err = syncer.client.Status().Patch(ctx, clusterIns, client.MergeFrom(originalIns))
 	if err != nil && !errors.IsNotFound(err) {
 		return fmt.Errorf("failed to update %s CR %s/%s: %w", syncer.statusTableName, clusterIns.GetNamespace(), clusterIns.GetName(), err)
-	}
-
-	return nil
-}
-
-func addClusterdeploymentDBSyncer(mgr ctrl.Manager, databaseConnectionPool *pgxpool.Pool, syncInterval time.Duration) error {
-	name := "clusterdeployments"
-
-	cd := NewClusterlifecycleDBSyncer(mgr, databaseConnectionPool, syncInterval, withComponentNameAsTableNames(name))
-	if err := mgr.Add(cd); err != nil {
-		return fmt.Errorf("failed to add %s syncer to the manager, err: %w", name, err)
 	}
 
 	return nil
