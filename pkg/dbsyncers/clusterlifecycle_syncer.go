@@ -147,9 +147,14 @@ func (syncer *clusterlifecycleDBSyncer) handle(ctx context.Context, clusterIns *
 func (syncer *clusterlifecycleDBSyncer) updateStatusFromDBtoCluter(ctx context.Context, clusterIns, dbInstance *unstructured.Unstructured) error {
 	originalIns := clusterIns.DeepCopy()
 
-	unstructured.SetNestedMap(clusterIns.Object["status"], dbInstance.Object["status"])
+	dbInstanceStatus, found, err := unstructured.NestedStringMap(dbInstance.Object, "status")
+	if !found || err != nil {
+		return fmt.Errorf("failed to get status field of DB object, either not found %v, or had error: %w", found, err)
+	}
 
-	err := syncer.client.Status().Patch(ctx, clusterIns, client.MergeFrom(originalIns))
+	unstructured.SetNestedStringMap(clusterIns.Object, dbInstanceStatus, "status")
+
+	err = syncer.client.Status().Patch(ctx, clusterIns, client.MergeFrom(originalIns))
 	if err != nil && !errors.IsNotFound(err) {
 		return fmt.Errorf("failed to update %s CR %s/%s: %w", syncer.statusTableName, clusterIns.GetNamespace(), clusterIns.GetName(), err)
 	}
