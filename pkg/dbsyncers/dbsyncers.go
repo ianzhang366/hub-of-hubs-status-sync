@@ -41,6 +41,8 @@ func AddDBSyncers(mgr ctrl.Manager, dbConnectionPool *pgxpool.Pool, syncInterval
 	addDBSyncerFunctions := []func(ctrl.Manager, *pgxpool.Pool, time.Duration) error{
 		addPolicyDBSyncer,
 		addClusterdeploymentDBSyncer,
+		addMachinepoolDBSyncer,
+		addKlusterletaddonconfigDBSyncer,
 	}
 
 	for _, addDBSyncerFunction := range addDBSyncerFunctions {

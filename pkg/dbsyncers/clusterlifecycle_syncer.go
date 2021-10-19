@@ -18,17 +18,44 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	cdv1 "github.com/openshift/hive/apis/hive/v1"
+	agentv1 "github.com/open-cluster-management/klusterlet-addon-controller/pkg/apis/agent/v1"
+	hivev1 "github.com/openshift/hive/apis/hive/v1"
 )
 
 func addClusterdeploymentDBSyncer(mgr ctrl.Manager, databaseConnectionPool *pgxpool.Pool, syncInterval time.Duration) error {
-	name := "clusterdeployments"
+	component := "clusterdeployments"
 
 	cd := NewClusterlifecycleDBSyncer(mgr, databaseConnectionPool, syncInterval,
-		withComponentNameAsTableNames(name),
-		withGVK(metav1.GroupVersionKind{Group: cdv1.HiveAPIGroup, Version: cdv1.HiveAPIVersion, Kind: "ClusterDeployment"}))
+		withComponentNameAsTableNames(component),
+		withGVK(metav1.GroupVersionKind{Group: hivev1.HiveAPIGroup, Version: hivev1.HiveAPIVersion, Kind: "ClusterDeployment"}))
 	if err := mgr.Add(cd); err != nil {
-		return fmt.Errorf("failed to add %s syncer to the manager, err: %w", name, err)
+		return fmt.Errorf("failed to add %s syncer to the manager, err: %w", component, err)
+	}
+
+	return nil
+}
+
+func addMachinepoolDBSyncer(mgr ctrl.Manager, databaseConnectionPool *pgxpool.Pool, syncInterval time.Duration) error {
+	component := "machinepools"
+
+	cd := NewClusterlifecycleDBSyncer(mgr, databaseConnectionPool, syncInterval,
+		withComponentNameAsTableNames(component),
+		withGVK(metav1.GroupVersionKind{Group: hivev1.HiveAPIGroup, Version: hivev1.HiveAPIVersion, Kind: "MachinePool"}))
+	if err := mgr.Add(cd); err != nil {
+		return fmt.Errorf("failed to add %s syncer to the manager, err: %w", component, err)
+	}
+
+	return nil
+}
+
+func addKlusterletaddonconfigDBSyncer(mgr ctrl.Manager, databaseConnectionPool *pgxpool.Pool, syncInterval time.Duration) error {
+	component := "klusterletaddonconfigs"
+
+	cd := NewClusterlifecycleDBSyncer(mgr, databaseConnectionPool, syncInterval,
+		withComponentNameAsTableNames(component),
+		withGVK(metav1.GroupVersionKind{Group: agentv1.SchemeGroupVersion.Group, Version: agentv1.SchemeGroupVersion.Version, Kind: "KlusterletAddonConfig"}))
+	if err := mgr.Add(cd); err != nil {
+		return fmt.Errorf("failed to add %s syncer to the manager, err: %w", component, err)
 	}
 
 	return nil
